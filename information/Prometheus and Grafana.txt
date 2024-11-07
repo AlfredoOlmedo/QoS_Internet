@@ -1,0 +1,130 @@
+Prometheus and Grafana
+
+Voy a guiarte paso a paso para instalar Prometheus y Grafana en tu Raspberry Pi 4 para que puedas monitorear tu red. 
+
+### Paso 1: Preparar tu Raspberry Pi
+1. Actualizar el sistema operativo:
+   - Asegúrate de que tu sistema operativo esté actualizado. Abre una terminal y ejecuta:
+     ```bash
+     sudo apt-get update
+     sudo apt-get upgrade
+     ```
+
+2. Instalar dependencias:
+   - Instala las dependencias necesarias:
+     ```bash
+     sudo apt-get install -y wget curl
+     ```
+
+### Paso 2: Instalar Prometheus
+1. Crear un usuario para Prometheus:
+   - Es una buena práctica crear un usuario separado para ejecutar Prometheus:
+     ```bash
+     sudo useradd --no-create-home --shell /bin/false prometheus
+     ```
+
+2. Crear los directorios necesarios:
+   - Crea los directorios donde Prometheus almacenará sus archivos de configuración y datos:
+     ```bash
+     sudo mkdir /etc/prometheus
+     sudo mkdir /var/lib/prometheus
+     ```
+
+3. Descargar Prometheus:
+   - Descarga la versión más reciente de Prometheus:
+     ```bash
+     wget https://github.com/prometheus/prometheus/releases/download/v2.42.0/prometheus-2.42.0.linux-armv7.tar.gz
+     ```
+
+4. Extraer y mover los archivos:
+   - Extrae el archivo descargado y mueve los binarios y archivos de configuración a los directorios correctos:
+     ```bash
+     tar -xvf prometheus-.tar.gz
+     cd prometheus-
+     sudo cp prometheus /usr/local/bin/
+     sudo cp promtool /usr/local/bin/
+     sudo cp -r consoles /etc/prometheus
+     sudo cp -r console_libraries /etc/prometheus
+     sudo cp prometheus.yml /etc/prometheus
+     ```
+
+5. Configurar permisos:
+   - Configura los permisos adecuados:
+     ```bash
+     sudo chown -R prometheus:prometheus /etc/prometheus
+     sudo chown -R prometheus:prometheus /var/lib/prometheus
+     sudo chown prometheus:prometheus /usr/local/bin/prometheus
+     sudo chown prometheus:prometheus /usr/local/bin/promtool
+     ```
+
+6. Crear el servicio systemd para Prometheus:
+   - Crea un archivo de servicio para que Prometheus se inicie automáticamente:
+     ```bash
+     sudo nano /etc/systemd/system/prometheus.service
+     ```
+     Pega lo siguiente en el archivo:
+     ```ini
+     [Unit]
+     Description=Prometheus
+     Wants=network-online.target
+     After=network-online.target
+
+     [Service]
+     User=prometheus
+     Group=prometheus
+     Type=simple
+     ExecStart=/usr/local/bin/prometheus \
+       --config.file /etc/prometheus/prometheus.yml \
+       --storage.tsdb.path /var/lib/prometheus/ \
+       --web.console.templates=/etc/prometheus/consoles \
+       --web.console.libraries=/etc/prometheus/console_libraries
+
+     [Install]
+     WantedBy=multi-user.target
+     ```
+   - Guarda y cierra el archivo.
+
+7. Iniciar y habilitar Prometheus:
+   - Inicia el servicio Prometheus y habilítalo para que se ejecute en el arranque:
+     ```bash
+     sudo systemctl daemon-reload
+     sudo systemctl start prometheus
+     sudo systemctl enable prometheus
+     ```
+
+### Paso 3: Instalar Grafana
+1. Agregar el repositorio de Grafana:
+   - Añade el repositorio oficial de Grafana para obtener la última versión:
+     ```bash
+     sudo apt-get install -y software-properties-common
+     wget -q -O - https://packages.grafana.com/gpg.key | sudo apt-key add -
+     sudo add-apt-repository "deb https://packages.grafana.com/oss/deb stable main"
+     ```
+
+2. Instalar Grafana:
+   - Instala Grafana usando apt:
+     ```bash
+     sudo apt-get update
+     sudo apt-get install grafana
+     ```
+
+3. Iniciar y habilitar Grafana:
+   - Inicia Grafana y habilítalo para que se ejecute al iniciar el sistema:
+     ```bash
+     sudo systemctl start grafana-server
+     sudo systemctl enable grafana-server
+     ```
+
+### Paso 4: Configurar Grafana
+1. Acceder a la interfaz de Grafana:
+   - Abre un navegador y ve a `http://<tu-raspberry-pi-ip>:3000`. El puerto por defecto es 3000.
+   - El nombre de usuario y contraseña predeterminados son `admin`. Después del primer inicio de sesión, se te pedirá que cambies la contraseña.
+
+2. Agregar Prometheus como fuente de datos:
+   - En la interfaz de Grafana, ve a "Configuration" > "Data Sources" > "Add data source".
+   - Selecciona "Prometheus" e ingresa la URL `http://localhost:9090`.
+
+### Paso 5: Crear Dashboards en Grafana
+- Una vez que Prometheus está configurado como fuente de datos, puedes crear dashboards personalizados para monitorear diferentes aspectos de tu red.
+
+Con estos pasos, deberías tener tanto Prometheus como Grafana corriendo en tu Raspberry Pi 4, listos para monitorear tu red. Si tienes alguna duda o necesitas más detalles, no dudes en preguntar.
